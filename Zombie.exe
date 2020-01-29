@@ -1,0 +1,558 @@
+ import java.awt.*;
+
+import javax.swing.*;
+
+import java.awt.event.*;
+import java.awt.geom.AffineTransform;
+import java.awt.geom.Line2D;
+
+public class Panel extends JPanel {
+
+    public boolean alwaysDraw = true;
+    public static final int WIDTH = 800;
+
+    public static final int HEIGHT = 600;
+    public int bulx, buly;
+    public int zombieCurrent = 0;
+    public int ypos = 0;
+    public int xpos = 0;
+    public boolean zombieSpawnsPainted = false;
+    public boolean bulletDataStored = false;
+    private int currentZombie = 0;
+    public boolean mouseDataStored = true;
+    public boolean bullet = true;
+    public int bullNo = -1;
+    public int bulletMax = 10;
+    public int zombiesMax = 6;
+    public int ammoleft;
+    private int bulletsBarValue;
+    private boolean reloading = false;
+    private boolean started = true;
+    private Player player = new Player();
+    private boolean playhover = false;
+    private double minusV;
+    private double relAm = 0;
+    public Zombie[] zombies = new Zombie[zombiesMax];
+    public Bullet[] ammo = new Bullet[bulletMax];
+    Panel pane; // make a panel class available throughout class
+    Image playerImage;
+    Image playerRelImage;
+    Image bulletImage;
+    Image zombieImage;
+    Image bgImage;
+
+    Panel() {
+        setSize(WIDTH, HEIGHT);
+        // load images routine:
+        ImageIcon playerIMGICON = new ImageIcon("player.png");
+        ImageIcon playerRelIMGICON = new ImageIcon("image.png");
+        ImageIcon bgIMGICON = new ImageIcon("bg.png");
+        ImageIcon bulletIMGICON = new ImageIcon("bullet.png");
+        ImageIcon zombieIMGICON = new ImageIcon("zombie.png");
+        for (int i = 0; i < bulletMax; i++) {
+            ammo[i] = new Bullet();
+        }
+        for (int i = 0; i < zombiesMax; i++) {
+            zombies[i] = new Zombie();
+        }
+        playerRelImage = playerRelIMGICON.getImage();
+        prepareImage(playerRelImage, this);
+        playerImage = playerIMGICON.getImage();
+        prepareImage(playerImage, this);
+        bulletImage = bulletIMGICON.getImage();
+        prepareImage(bulletImage, this);
+        bgImage = bgIMGICON.getImage();
+        prepareImage(bgImage, this);
+        zombieImage = zombieIMGICON.getImage();
+        prepareImage(zombieImage, this);
+        // -------
+        // setup mouse for input
+        addMouseListener(new MouseHandler(this));
+        new Timer(200, updateTimer).start(); // start timer
+        new Timer(1, bulletCheckTimer).start();
+        new Timer(2000, reloadTimer);
+         
+        new Timer(100, animateZombies).start();
+        for(int i = 0; i < zombies.length; i++){
+            zombies[i].isAlive = true;
+        }
+    }
+    
+    
+    
+    private static JLable create ScaledImage (String filename, width, int height)
+    {
+        return new JLable(new ImageIcon(filename).getimage())
+    }
+
+    Action updateTimer = new AbstractAction() { // Swing Timer
+
+        /**
+         * 
+         */
+        private static final long serialVersionUID = 1L;
+
+        public void actionPerformed(ActionEvent e) {
+
+            if (alwaysDraw) {
+                /*
+                 * //to check if SwingTimer is working correctly: String
+                 * st="Welcome"; JOptionPane.showMessageDialog(null,st);
+                 */
+                repaint();
+
+            }
+        }
+    };
+    Action reloadTimer = new AbstractAction() { // Swing Timer
+
+        /**
+         * 
+         */
+        private static final long serialVersionUID = 1L;
+
+        public void actionPerformed(ActionEvent e) {
+ 
+            bullNo = 0;
+            bullet = true;
+            for (int i = 0; i < bulletMax; i++) {
+
+                ammo[i].reset();
+            }
+            reloading = false;
+ 
+        }
+    };
+
+    Action bulletCheckTimer = new AbstractAction() { // Swing Timer
+        /*
+         *
+         */
+        private static final long serialVersionUID = 1L;
+ 
+        public void actionPerformed(ActionEvent e) {
+ 
+            /*
+             * //to check if SwingTimer is working correctly: String
+             * st="Welcome"; JOptionPane.showMessageDialog(null,st);
+             */
+            for (int i = 0; i < bullNo; i++) {
+                ammo[i].setAlive(true);
+                if (bulletDataStored == false) {
+                    ammo[i].setX(400);
+                    ammo[i].setY(250);
+                }
+
+                bulletDataStored = true;
+                if (ammo[i].isAlive()) {
+                    ammo[i].setY(ammo[i].getY() - 5);
+                    if (buly < -200) { // used -200 otherwise it stops before
+                        // end of screen in many cases
+                        ammo[i].setAlive(false);
+                        bulletDataStored = false;
+                        ammo[i].setMouseDataStored(false);
+ 
+
+                    }
+
+                }
+
+                // bulx+=0;
+ 
+                repaint();
+            }
+        }
+
+    };
+
+    public void collisionDetection() {
+
+        for (int i = 0; i < zombiesMax; i++) {
+            Rectangle zombieBounds = zombies[i].getBounds();
+            Rectangle playerBounds = player.getBounds();
+
+            if (zombieBounds.intersects(playerBounds)) {
+                zombies[i].setX(400);
+                zombies[i].setY(300);
+
+            }
+            //for(int j = 0; j < bulletMax; j++){
+                //Rectangle bulletBounds = ammo[j].getBounds();
+                //if (zombieBounds.intersects(bulletBounds)) {
+                    //int count = 0;
+                    //zombies[i].isAlive = false;
+                    //if (count < 1) {
+                        //String st = "Welcome";
+                        //JOptionPane.showMessageDialog(null, st);
+                        //count = 1;
+                    //}
+
+                }
+            }
+
+    //    }
+
+    //}
+
+    Action animateZombies = new AbstractAction() { // Swing Timer
+        /**
+                 *
+                 */
+        private static final long serialVersionUID = 1L;
+ 
+        public void actionPerformed(ActionEvent e) {
+            randomizecurrentZombie();
+            int i = 0;
+            for (i = 0; i < zombiesMax; i++) {
+                if(zombies[i].isAlive){
+                if (zombies[i].getY() < 300) {
+                    zombies[i].setY(zombies[i].getY() + 1);
+                    zombies[i].setX(zombies[i].getX() + 1);
+ 
+                }
+                if (zombies[i].getY() > 300) {
+                    zombies[i].setY(zombies[i].getY() - 1);
+                    zombies[i].setX(zombies[i].getX() + 1);
+                }
+            }
+            }
+            collisionDetection();
+            repaint();
+        }
+    };
+
+    private boolean exithover;
+ 
+    public void rotatePlayer(Graphics g) {
+        // Centre = width = 800/2, height = 600/2
+        Graphics2D g2d = (Graphics2D) g;
+
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                RenderingHints.VALUE_ANTIALIAS_ON);
+ 
+        int curxpos = MouseInfo.getPointerInfo().getLocation().x - 5;
+        int curypos = MouseInfo.getPointerInfo().getLocation().y - 50;
+        // that is in my mouseHandler
+        double o = 400 - curypos;
+        double a = curxpos - 400;
+ 
+        AffineTransform origXform = g2d.getTransform();
+        AffineTransform newXform = (AffineTransform) (origXform.clone());
+
+        double angle = Math.toRadians(getAngle(o, a));
+        g2d.setPaint(Color.red); // to see what is rotating
+        newXform.rotate(angle, 400, 300);
+        g2d.setTransform(newXform);
+ 
+        if (!reloading) {
+            g2d.draw(new Line2D.Double(400, -1000, 400, 300));
+            g2d.drawImage(playerImage, 300, 200, this);
+ 
+        } else {
+            g2d.drawImage(playerRelImage, 300, 200, this);
+        }
+        g2d.setTransform(origXform);
+        paintZombies(g);
+
+        repaint();
+ 
+    }
+ 
+    public void paintBg(Graphics g) {
+        // draw background image:
+        Graphics2D g2d = (Graphics2D) g;
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                RenderingHints.VALUE_ANTIALIAS_ON);
+        g2d.drawImage(bgImage, 0, 0, this);
+ 
+        g2d.setColor(Color.red);
+        // draw health bar:
+        g2d.drawRect(10, 40, 100, 20);
+        bulletsBarValue = 100;
+        minusV = (bullNo * 100 / bulletMax);
+        int minusVal = (int) minusV;
+        g2d.fillRect(10, 40, bulletsBarValue - minusVal, 20);
+        if (reloading) {
+            relAm += 0.2;
+            if (relAm > 100) {
+                relAm = 100;
+            }
+            g2d.fillRect(10, 40, (int) relAm, 20);
+        } else {
+            relAm = 0;
+        }
+        repaint();
+    }
+
+    public void paintBullet(Graphics g) {
+
+        Graphics2D g2d = (Graphics2D) g;
+        for (int i = 0; i < bullNo; i++) {
+            if (ammo[i].isAlive()) {
+                if (!ammo[i].isMouseDataStored()) {
+                    ammo[i]
+                            .setX2(MouseInfo.getPointerInfo().getLocation().x - 5);
+                    ammo[i]
+                            .setY2(MouseInfo.getPointerInfo().getLocation().y - 50);
+                }
+                ammo[i].setMouseDataStored(true);
+                // that is in my mouseHandler
+                double o = 400 - ammo[i].getY2();
+                double a = ammo[i].getX2() - 400;
+                double angle = Math.toRadians(getAngle(o, a));
+                AffineTransform origXform = g2d.getTransform();
+                AffineTransform newXform = (AffineTransform) (origXform.clone());
+                newXform.rotate(angle, 400, 300);
+                g2d.setTransform(newXform);
+                g2d
+                        .drawImage(bulletImage, ammo[i].getX(), ammo[i].getY(),
+                                pane);
+                g2d.setTransform(origXform);
+                Toolkit.getDefaultToolkit().sync();
+
+            }
+        }
+        ammoleft = bulletMax - bullNo;
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                RenderingHints.VALUE_ANTIALIAS_ON);
+        Font font = new Font("Arial", Font.PLAIN, 20);
+        g2d.setFont(font);
+ 
+        g2d.drawString("ammo : " + String.valueOf(ammoleft), 10, 20);
+        g.dispose();
+    }
+ 
+    public double getAngle(double a, double o) {
+ 
+        double rat = o / a;
+        double ang = Math.atan(rat);
+        double rAng = Math.toDegrees(ang);
+        if (a < 0) {
+            rAng += 180;
+        }
+        if (o < 0 && a > 0) {
+            rAng += 360;
+        }
+
+        return rAng;
+
+    }
+
+    public void reload() {
+        reloading = true;
+        Timer ReloadTimer = new Timer(3000, reloadTimer);
+        ReloadTimer.setRepeats(false);
+        ReloadTimer.start();
+
+    }
+
+    public void paintUI(Graphics g) {
+        Graphics2D g2d = (Graphics2D) g;
+        g2d.setColor(Color.red);
+        // draw health bar:
+        int curxpos = MouseInfo.getPointerInfo().getLocation().x - 5;
+        int curypos = MouseInfo.getPointerInfo().getLocation().y - 50;
+        int playwidth = 100;
+        int playheight = 30;
+        int playx = (WIDTH / 2) - (playwidth / 2);
+        int playy = (HEIGHT / 2) - (playheight / 2);
+        Font font = new Font("Arial", Font.PLAIN, 20);
+        g2d.setFont(font);
+ 
+        if (curxpos > playx && curypos > playy && curxpos < playx + (playwidth)
+                && curypos < playy + (playheight)) {
+            g2d.setColor(Color.black);
+ 
+            g2d.fillRect(playx, playy, playwidth, playheight);
+            g2d.setColor(Color.red);
+            g2d.drawRect(playx, playy, playwidth, playheight);
+ 
+            g2d.drawString("Play", playx + 30, playy + 23);
+ 
+            playhover = true;
+        } else {
+            g2d.setColor(Color.red);
+ 
+            g2d.fillRect(playx, playy, playwidth, playheight);
+            g2d.setColor(Color.black);
+            g2d.drawRect(playx, playy, playwidth, playheight);
+            g2d.drawString("Play", playx + 30, playy + 23);
+ 
+        }
+        int exitwidth = 100;
+        int exitheight = 30;
+        int exitx = (WIDTH / 2) - (exitwidth / 2);
+
+        int exity = (HEIGHT / 2) - (exitheight / 2) + exitheight + 2;
+ 
+        if (curxpos > exitx && curypos > exity && curxpos < exitx + (exitwidth)
+                && curypos < exity + (exitheight)) {
+            g2d.setColor(Color.black);
+ 
+            g2d.fillRect(exitx, exity, exitwidth, exitheight);
+            g2d.setColor(Color.red);
+            g2d.drawRect(exitx, exity, exitwidth, exitheight);
+ 
+            g2d.drawString("Exit", exitx + 30, exity + 23);
+ 
+            exithover = true;
+        } else {
+            g2d.setColor(Color.red);
+ 
+            g2d.fillRect(exitx, exity, exitwidth, exitheight);
+            g2d.setColor(Color.black);
+            g2d.drawRect(exitx, exity, exitwidth, exitheight);
+            g2d.drawString("Exit", exitx + 30, exity + 23);
+ 
+        }
+ 
+    }
+ 
+    public void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        if (started) {
+            paintBg(g);
+            rotatePlayer(g);
+            paintBullet(g);
+            paintZombies(g);
+            
+        } else {
+            paintUI(g);
+       }
+
+       setVisible(true);
+   }
+
+ 
+    public void randomizecurrentZombie() {
+        currentZombie = (int) (Math.random() * zombiesMax);
+ 
+    }
+ 
+    public void paintSpawnLocations(Graphics g) {
+        Graphics2D g2d = (Graphics2D) g;
+        if(zombies[currentZombie].isAlive){
+        if (currentZombie == 0) {
+            g2d.drawImage(zombieImage, 20, 400, pane);
+            zombies[currentZombie].setX(20);
+            zombies[currentZombie].setY(400);
+        }
+        if (currentZombie == 1) {
+            g2d.drawImage(zombieImage, 20, 300, pane);
+            zombies[currentZombie].setX(20);
+            zombies[currentZombie].setY(300);
+
+        }
+        if (currentZombie == 2) {
+            g2d.drawImage(zombieImage, 20, 60, pane);
+            zombies[currentZombie].setX(20);
+            zombies[currentZombie].setY(60);
+        }
+        if (currentZombie == 3) {
+            g2d.drawImage(zombieImage, 20, 200, pane);
+            zombies[currentZombie].setX(20);
+            zombies[currentZombie].setY(200);
+        }
+        if (currentZombie == 4) {
+            g2d.drawImage(zombieImage, 100, 200, pane);
+            zombies[currentZombie].setX(100);
+            zombies[currentZombie].setY(200);
+        }
+        if (currentZombie == 5) {
+            g2d.drawImage(zombieImage, 200, 600, pane);
+            zombies[currentZombie].setX(200);
+            zombies[currentZombie].setY(600);
+            zombieSpawnsPainted = true;
+        }}
+    }
+ 
+    public void paintZombies(Graphics g) {
+        // super.paintComponent(g);
+        Graphics2D g2d = (Graphics2D) g;
+ 
+        if (zombieSpawnsPainted == false) {
+            paintSpawnLocations(g);
+        }
+ 
+    for (int i = 0; i < zombiesMax; i++) {
+
+            if (zombies[i].isAlive) {
+                double o = 400 - zombies[i].getY();
+                double a = zombies[i].getX() - 400;
+ 
+                AffineTransform origXform = g2d.getTransform();
+                AffineTransform newXform = (AffineTransform) (origXform.clone());
+ 
+                double angle = Math.toRadians(getAngle(o, a));
+                g2d.setPaint(Color.red); // to see what is rotating
+                newXform.rotate(angle, 400, 300);
+                g2d.setTransform(newXform);
+ 
+                g2d.drawImage(zombieImage, zombies[i].getX(),
+                        zombies[i].getY(), pane);
+                g2d.setTransform(origXform);
+             
+            Toolkit.getDefaultToolkit().sync();
+            repaint();
+            }
+        }
+    }
+ 
+    class MouseHandler implements MouseListener { // Listener for mouse input
+        // implements MouseListener
+        // interface
+        // An interface is a class whereby, code can be setup in the method that
+        // calls it however as you will see
+        // by the blank methods, all the methods must be called.
+ 
+        public MouseHandler(Panel panel) {
+ 
+        }
+ 
+        public void mouseClicked(MouseEvent m) {
+ 
+        }
+ 
+        public void mousePressed(MouseEvent m) { // blank methods that must be
+            // overriden for the
+            // interface to be
+            // implemented without an
+            // error
+            if (bullet) {
+                bulletsBarValue = bulletsBarValue - 1;
+                bullNo++;
+                for (int i = 0; i < bullNo; i++) {
+                    if (!ammo[i].isShot()) {
+                        ammo[i].setShot(true);
+                    }
+                    if (i == bulletMax - 1) {
+                        bullet = false;
+                        reload();
+ 
+                    }
+                }
+            }
+            if (playhover) {
+                started = true;
+            }
+            if (exithover) {
+                System.exit(0);
+            }
+ 
+        }
+ 
+        public void mouseReleased(MouseEvent m) {
+        }
+ 
+        public void mouseEntered(MouseEvent m) {
+        }
+ 
+        public void mouseExited(MouseEvent m) {
+
+        }
+ 
+        public void mouseDragged(MouseEvent m) {
+ 
+        }
+    }
+}
